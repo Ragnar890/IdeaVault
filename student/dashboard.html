@@ -1,0 +1,248 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Student Dashboard - IdeaVault</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <link rel="stylesheet" href="dashboard-styles.css">
+</head>
+<body>
+    <nav class="navbar navbar-expand-lg">
+        <div class="container">
+            <a class="navbar-brand" href="#">
+                <span class="idea">Idea</span><span class="vault">Vault</span>
+            </a>
+            <div class="d-flex align-items-center">
+                <div class="user-info me-3">
+                    <span class="user-name" id="studentName"></span>
+                    <small class="d-block text-muted" id="enrollmentNumber"></small>
+                </div>
+                <button class="btn btn-outline-primary" onclick="logout()">Logout</button>
+            </div>
+        </div>
+    </nav>
+
+   
+    <div class="settings-button" onclick="toggleSettings()">
+        <i class="fas fa-cog"></i>
+    </div>
+
+    <div class="container mt-4">
+        <div class="dashboard-header">
+            <h2>Project Categories</h2>
+            <p>Select a category to submit your project</p>
+        </div>
+        
+        <div class="row mt-4">
+            <div class="col-md-4 mb-4">
+                <div class="project-box ai-box" onclick="showSubmissionForm('AI')">
+                    <div class="icon-wrapper">
+                        <i class="fas fa-brain"></i>
+                    </div>
+                    <h3>Artificial Intelligence</h3>
+                    <p>Machine Learning, Deep Learning, Neural Networks</p>
+                    <div class="hover-info">
+                        <span>Click to Submit</span>
+                        <ul>
+                            <li>ML Projects</li>
+                            <li>AI Applications</li>
+                            <li>Neural Networks</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="col-md-4 mb-4">
+                <div class="project-box web-box" onclick="showSubmissionForm('Web')">
+                    <div class="icon-wrapper">
+                        <i class="fas fa-globe"></i>
+                    </div>
+                    <h3>Web Development</h3>
+                    <p>Frontend, Backend, Full Stack Projects</p>
+                    <div class="hover-info">
+                        <span>Click to Submit</span>
+                        <ul>
+                            <li>Web Applications</li>
+                            <li>REST APIs</li>
+                            <li>Web Services</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="col-md-4 mb-4">
+                <div class="project-box mobile-box" onclick="showSubmissionForm('Mobile')">
+                    <div class="icon-wrapper">
+                        <i class="fas fa-mobile-alt"></i>
+                    </div>
+                    <h3>Mobile Development</h3>
+                    <p>Android, iOS, Cross-platform Apps</p>
+                    <div class="hover-info">
+                        <span>Click to Submit</span>
+                        <ul>
+                            <li>Android Apps</li>
+                            <li>iOS Apps</li>
+                            <li>Flutter Projects</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-md-4 mb-4">
+                <div class="project-box iot-box" onclick="showSubmissionForm('IoT')">
+                    <div class="icon-wrapper">
+                        <i class="fas fa-microchip"></i>
+                    </div>
+                    <h3>IoT Projects</h3>
+                    <p>Internet of Things, Embedded Systems</p>
+                    <div class="hover-info">
+                        <span>Click to Submit</span>
+                        <ul>
+                            <li>Sensor Networks</li>
+                            <li>Smart Devices</li>
+                            <li>Automation</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-md-4 mb-4">
+                <div class="project-box blockchain-box" onclick="showSubmissionForm('Blockchain')">
+                    <div class="icon-wrapper">
+                        <i class="fas fa-link"></i>
+                    </div>
+                    <h3>Blockchain</h3>
+                    <p>Cryptocurrency, Smart Contracts</p>
+                    <div class="hover-info">
+                        <span>Click to Submit</span>
+                        <ul>
+                            <li>Smart Contracts</li>
+                            <li>DApps</li>
+                            <li>Crypto Projects</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-md-4 mb-4">
+                <div class="project-box other-box" onclick="showSubmissionForm('Other')">
+                    <div class="icon-wrapper">
+                        <i class="fas fa-code"></i>
+                    </div>
+                    <h3>Other Projects</h3>
+                    <p>Cloud, DevOps, Security</p>
+                    <div class="hover-info">
+                        <span>Click to Submit</span>
+                        <ul>
+                            <li>Cloud Projects</li>
+                            <li>Security Tools</li>
+                            <li>System Design</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    
+    <div class="modal fade" id="submissionModal" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Submit Project</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="projectSubmissionForm">
+                        <input type="hidden" id="projectCategory">
+                        <div class="mb-3">
+                            <label class="form-label">Project Title</label>
+                            <input type="text" class="form-control" id="projectTitle" required>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Project Description</label>
+                            <textarea class="form-control" id="projectDescription" rows="4" required></textarea>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Technologies Used</label>
+                            <input type="text" class="form-control" id="projectTech" 
+                                   placeholder="e.g., Python, TensorFlow, React" required>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">GitHub Repository URL</label>
+                            <input type="url" class="form-control" id="projectUrl">
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Project Files</label>
+                            <input type="file" class="form-control" id="projectFiles" multiple>
+                            <small class="text-muted">Upload documentation, presentations, or other relevant files</small>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Team Members (if any)</label>
+                            <input type="text" class="form-control" id="teamMembers" 
+                                   placeholder="Enter team member names separated by commas">
+                        </div>
+                        <button type="submit" class="btn btn-primary">Submit Project</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    
+    <div class="settings-panel" id="settingsPanel">
+        <div class="settings-content">
+            <h3>Settings</h3>
+            <div class="settings-section">
+                <h4>Profile Settings</h4>
+                <form id="profileSettingsForm">
+                    <div class="mb-3">
+                        <label class="form-label">First Name</label>
+                        <input type="text" class="form-control" id="settingsFirstName">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Last Name</label>
+                        <input type="text" class="form-control" id="settingsLastName">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Phone Number</label>
+                        <input type="tel" class="form-control" id="settingsPhone">
+                    </div>
+                    <button type="submit" class="btn btn-primary">Update Profile</button>
+                </form>
+            </div>
+
+            <div class="settings-section mt-4">
+                <h4>Change Password</h4>
+                <form id="passwordChangeForm">
+                    <div class="mb-3">
+                        <label class="form-label">Current Password</label>
+                        <input type="password" class="form-control" id="currentPassword" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">New Password</label>
+                        <input type="password" class="form-control" id="newPassword" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Confirm New Password</label>
+                        <input type="password" class="form-control" id="confirmNewPassword" required>
+                    </div>
+                    <button type="submit" class="btn btn-primary">Change Password</button>
+                </form>
+            </div>
+
+            <div class="settings-section mt-4">
+                <h4>My Submissions</h4>
+                <div id="submissionsList" class="submissions-list">
+                    
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="dashboard.js"></script>
+</body>
+</html> 
