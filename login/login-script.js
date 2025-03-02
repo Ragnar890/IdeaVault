@@ -5,28 +5,6 @@ document.addEventListener('DOMContentLoaded', () => {
     const studentOnly = document.querySelector('.student-only');
     const loginForm = document.getElementById('loginForm');
 
-    
-    const facultyCredentials = {
-        'FAC001': {
-            name: 'Dr. Amit Patel',
-            email: 'faculty.cse@paruluniversity.ac.in',
-            password: 'faculty123',
-            department: 'Computer Science'
-        },
-        'FAC002': {
-            name: 'Prof. Priya Shah',
-            email: 'faculty.it@paruluniversity.ac.in',
-            password: 'faculty456',
-            department: 'Information Technology'
-        },
-        'FAC003': {
-            name: 'Dr. Rajesh Kumar',
-            email: 'hod.cse@paruluniversity.ac.in',
-            password: 'hod123',
-            department: 'Computer Science'
-        }
-    };
-
     // Toggle between student and faculty login
     userTypeButtons.forEach(button => {
         button.addEventListener('click', () => {
@@ -45,56 +23,96 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     });
 
-    
+    const API_BASE_URL = 'http://localhost:30001';
+
     loginForm.addEventListener('submit', async (e) => {
         e.preventDefault();
+        console.log('Login form submitted');
 
-        const userType = document.querySelector('.user-type-toggle .btn.active').dataset.type;
-        const password = document.getElementById('password').value;
+        // Get active user type
+        const activeButton = document.querySelector('.user-type-toggle .btn.active');
+        if (!activeButton) {
+            showError('Please select a user type (Student or Faculty)');
+            return;
+        }
+        const userType = activeButton.dataset.type;
 
-        if (userType === 'faculty') {
-            const facultyId = document.getElementById('facultyId').value;
-            const faculty = facultyCredentials[facultyId];
+        // Get email based on user type
+        const emailInput = userType === 'faculty' ? 
+            document.getElementById('facultyEmail') : 
+            document.getElementById('studentEmail');
+        
+        const passwordInput = document.getElementById('password');
 
-            if (faculty && faculty.password === password) {
+        // Validate form fields
+        if (!emailInput || !passwordInput) {
+            showError('Required form fields are missing');
+            console.error('Form fields not found:', { 
+                emailInput: !!emailInput, 
+                passwordInput: !!passwordInput 
+            });
+            return;
+        }
+
+        const email = emailInput.value.trim();
+        const password = passwordInput.value.trim();
+
+        // Validate input values
+        if (!email || !password) {
+            showError('Please fill in all required fields');
+            return;
+        }
+
+        console.log('Attempting login with:', { userType, email });
+
+        try {
+            const apiUrl = `${API_BASE_URL}/api/auth/login`;
+            console.log('Sending request to:', apiUrl);
+            console.log('Request payload:', { email, password, userType });
+            
+            const response = await fetch(apiUrl, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Accept': 'application/json'
+                },
+                mode: 'cors',
+                credentials: 'include',
+                body: JSON.stringify({ email, password, userType })
+            });
+
+            console.log('Response status:', response.status);
+            console.log('Response headers:', Object.fromEntries(response.headers.entries()));
+            
+            const data = await response.json();
+            console.log('Response data:', data);
+
+            if (response.ok) {
+                // Store user info in session
+                sessionStorage.setItem('userType', data.user.role);
+                sessionStorage.setItem('userId', data.user.id);
+                sessionStorage.setItem('userName', data.user.name);
+                sessionStorage.setItem('userEmail', data.user.email);
+                sessionStorage.setItem('token', data.token);
+                sessionStorage.setItem('isLoggedIn', 'true');
+
+                showSuccess('Login successful! Redirecting to homepage...');
+                console.log('Login successful, redirecting...');
                 
-                sessionStorage.setItem('userType', 'faculty');
-                sessionStorage.setItem('facultyId', facultyId);
-                sessionStorage.setItem('facultyName', faculty.name);
-                sessionStorage.setItem('facultyEmail', faculty.email);
-                sessionStorage.setItem('facultyDepartment', faculty.department);
-                sessionStorage.setItem('isLoggedIn', 'true');
-
-                showSuccess('Login successful! Redirecting to homepage...');
+                // Use window.location.origin to get the base URL
+                const homeUrl = window.location.origin + '/home/index.html';
+                console.log('Redirecting to:', homeUrl);
+                
                 setTimeout(() => {
-                    window.location.href = '../home/index.html';
+                    window.location.href = homeUrl;
                 }, 1500);
             } else {
-                showError('Invalid faculty credentials');
+                console.error('Login failed:', data.message);
+                showError(data.message || 'Invalid credentials');
             }
-        } else {
-            const enrollmentNumber = document.getElementById('enrollmentNumber').value;
-            const students = JSON.parse(localStorage.getItem('students')) || [];
-            const student = students.find(s => 
-                s.enrollmentNumber === enrollmentNumber && 
-                s.password === password
-            );
-
-            if (student) {
-                // Store student info in session
-                sessionStorage.setItem('userType', 'student');
-                sessionStorage.setItem('studentId', student.enrollmentNumber);
-                sessionStorage.setItem('studentName', `${student.firstName} ${student.lastName}`);
-                sessionStorage.setItem('studentEmail', student.email);
-                sessionStorage.setItem('isLoggedIn', 'true');
-
-                showSuccess('Login successful! Redirecting to homepage...');
-                setTimeout(() => {
-                    window.location.href = '../home/index.html';
-                }, 1500);
-            } else {
-                showError('Invalid student credentials');
-            }
+        } catch (error) {
+            console.error('Login error:', error);
+            showError('Error connecting to server. Please try again.');
         }
     });
 

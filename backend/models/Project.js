@@ -1,36 +1,49 @@
 const mongoose = require('mongoose');
 
 const projectSchema = new mongoose.Schema({
-    title: { type: String, required: true },
-    description: { type: String, required: true },
-    category: { 
-        type: String, 
-        enum: ['AI', 'Web', 'Mobile', 'IoT', 'Blockchain', 'Other'],
-        required: true 
+    title: {
+        type: String,
+        required: true
     },
-    technologies: [String],
-    githubUrl: String,
-    files: [{
-        filename: String,
-        path: String,
-        size: Number
+    description: {
+        type: String,
+        required: true
+    },
+    category: {
+        type: String,
+        required: true,
+        enum: ['Artificial Intelligence', 'Web Development', 'Mobile Development', 
+               'IoT Projects', 'Blockchain', 'Cloud Computing']
+    },
+    technologies: [{
+        type: String,
+        required: true
     }],
-    student: {
+    submittedBy: {
         type: mongoose.Schema.Types.ObjectId,
         ref: 'User',
         required: true
+    },
+    githubUrl: {
+        type: String
     },
     status: {
         type: String,
         enum: ['pending', 'approved', 'rejected', 'revision'],
         default: 'pending'
     },
-    feedback: String,
-    reviewedBy: {
-        type: mongoose.Schema.Types.ObjectId,
-        ref: 'User'
+    feedback: {
+        type: String
     },
-    submissionDate: { type: Date, default: Date.now }
+    submissionDate: {
+        type: Date,
+        default: Date.now
+    },
+    files: [{
+        filename: String,
+        path: String,
+        uploadDate: Date
+    }]
 });
 
 module.exports = mongoose.model('Project', projectSchema); 

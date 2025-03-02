@@ -1,15 +1,41 @@
-const router = require('express').Router();
+const express = require('express');
+const router = express.Router();
 const Project = require('../models/Project');
 const auth = require('../middleware/auth');
-const upload = require('../middleware/upload');
 
 // Get all projects
 router.get('/', auth, async (req, res) => {
     try {
         const projects = await Project.find()
-            .populate('student', 'firstName lastName enrollmentNumber')
-            .populate('reviewedBy', 'firstName lastName');
+            .populate('submittedBy', 'firstName lastName enrollmentNumber')
+            .sort({ submissionDate: -1 });
         res.json(projects);
+    } catch (error) {
+        res.status(500).json({ message: error.message });
+    }
+});
+
+// Get projects by student ID
+router.get('/student/:studentId', auth, async (req, res) => {
+    try {
+        const projects = await Project.find({ submittedBy: req.params.studentId })
+            .populate('submittedBy', 'firstName lastName enrollmentNumber')
+            .sort({ submissionDate: -1 });
+        res.json(projects);
+    } catch (error) {
+        res.status(500).json({ message: error.message });
+    }
+});
+
+// Get project by ID
+router.get('/:id', auth, async (req, res) => {
+    try {
+        const project = await Project.findById(req.params.id)
+            .populate('submittedBy', 'firstName lastName enrollmentNumber');
+        if (!project) {
+            return res.status(404).json({ message: 'Project not found' });
+        }
+        res.json(project);
     } catch (error) {
         res.status(500).json({ message: error.message });
     }
@@ -18,51 +44,79 @@ router.get('/', auth, async (req, res) => {
 // Submit new project
 router.post('/', auth, async (req, res) => {
     try {
-        const project = new Project({
-            ...req.body,
-            student: req.user.id
-        });
-        await project.save();
-        res.status(201).json(project);
-    } catch (error) {
-        res.status(400).json({ message: error.message });
-    }
-});
-
-// Update project status (faculty only)
-router.patch('/:id/status', auth, async (req, res) => {
-    try {
-        if (req.user.role !== 'faculty') {
-            return res.status(403).json({ message: 'Not authorized' });
+        if (req.user.role !== 'student') {
+            return res.status(403).json({ message: 'Only students can submit projects' });
         }
 
-        const project = await Project.findByIdAndUpdate(
-            req.params.id,
-            {
-                status: req.body.status,
-                feedback: req.body.feedback,
-                reviewedBy: req.user.id
-            },
-            { new: true }
-        );
-        res.json(project);
+        const project = new Project({
+            title: req.body.title,
+            description: req.body.description,
+            category: req.body.category,
+            technologies: req.body.technologies,
+            submittedBy: req.user.id,
+            githubUrl: req.body.githubUrl,
+            files: req.body.files
+        });
+
+        const newProject = await project.save();
+        await newProject.populate('submittedBy', 'firstName lastName enrollmentNumber');
+        res.status(201).json(newProject);
     } catch (error) {
         res.status(400).json({ message: error.message });
     }
 });
 
-// Add this route for file uploads
-router.post('/upload', auth, upload.array('files', 5), async (req, res) => {
+// Update project (for feedback and status)
+router.patch('/:id', auth, async (req, res) => {
     try {
-        const files = req.files.map(file => ({
-            filename: file.originalname,
-            path: file.path,
-            size: file.size
-        }));
-        res.json(files);
+        const project = await Project.findById(req.params.id);
+        if (!project) {
+            return res.status(404).json({ message: 'Project not found' });
+        }
+
+        // Only faculty can update status and feedback
+        if (req.user.role === 'faculty') {
+            if (req.body.status) project.status = req.body.status;
+            if (req.body.feedback) project.feedback = req.body.feedback;
+        } 
+        // Students can only update their own projects
+        else if (req.user.role === 'student' && project.submittedBy.toString() === req.user.id) {
+            if (req.body.title) project.title = req.body.title;
+            if (req.body.description) project.description = req.body.description;
+            if (req.body.category) project.category = req.body.category;
+            if (req.body.technologies) project.technologies = req.body.technologies;
+            if (req.body.githubUrl) project.githubUrl = req.body.githubUrl;
+            if (req.body.files) project.files = req.body.files;
+        } else {
+            return res.status(403).json({ message: 'Not authorized to update this project' });
+        }
+
+        const updatedProject = await project.save();
+        await updatedProject.populate('submittedBy', 'firstName lastName enrollmentNumber');
+        res.json(updatedProject);
     } catch (error) {
         res.status(400).json({ message: error.message });
     }
 });
 
-module.exports = router; 
+// Delete project
+router.delete('/:id', auth, async (req, res) => {
+    try {
+        const project = await Project.findById(req.params.id);
+        if (!project) {
+            return res.status(404).json({ message: 'Project not found' });
+        }
+
+        // Only allow deletion by the student who submitted it or faculty
+        if (req.user.role !== 'faculty' && project.submittedBy.toString() !== req.user.id) {
+            return res.status(403).json({ message: 'Not authorized to delete this project' });
+        }
+
+        await project.remove();
+        res.json({ message: 'Project deleted successfully' });
+    } catch (error) {
+        res.status(500).json({ message: error.message });
+    }
+});
+
+module.exports = router;

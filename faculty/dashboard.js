@@ -1,3 +1,5 @@
+const API_BASE_URL = 'http://localhost:30001';
+
 document.addEventListener('DOMContentLoaded', () => {
     // Check if faculty is logged in
     const isLoggedIn = sessionStorage.getItem('isLoggedIn');
@@ -9,8 +11,9 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // Display faculty name
-    const facultyId = sessionStorage.getItem('facultyId');
-    document.getElementById('facultyName').textContent = `Faculty ID: ${facultyId}`;
+    const facultyName = sessionStorage.getItem('facultyName');
+    const facultyId = sessionStorage.getItem('userId');
+    document.getElementById('facultyName').textContent = facultyName;
 
     // Load all projects initially
     loadProjects('all');
@@ -19,24 +22,43 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('feedbackForm').addEventListener('submit', handleFeedbackSubmission);
 });
 
-function loadProjects(category) {
-    const students = JSON.parse(localStorage.getItem('students')) || [];
-    const projectsList = document.getElementById('projectsList');
-    projectsList.innerHTML = '';
-
-    students.forEach(student => {
-        if (!student.submissions) return;
-
-        student.submissions.forEach(project => {
-            if (category === 'all' || project.category === category) {
-                const projectCard = createProjectCard(student, project);
-                projectsList.appendChild(projectCard);
+async function loadProjects(category) {
+    try {
+        const response = await fetch(`${API_BASE_URL}/api/projects`, {
+            headers: {
+                'Authorization': `Bearer ${sessionStorage.getItem('token')}`
             }
         });
-    });
+
+        if (!response.ok) {
+            throw new Error('Failed to load projects');
+        }
+
+        const projects = await response.json();
+        const projectsList = document.getElementById('projectsList');
+        projectsList.innerHTML = '';
+
+        // Filter projects if category is specified
+        const filteredProjects = category === 'all' 
+            ? projects 
+            : projects.filter(project => project.category === category);
+
+        if (filteredProjects.length === 0) {
+            projectsList.innerHTML = '<p class="text-muted text-center">No projects found</p>';
+            return;
+        }
+
+        filteredProjects.forEach(project => {
+            const projectCard = createProjectCard(project);
+            projectsList.appendChild(projectCard);
+        });
+    } catch (error) {
+        console.error('Error loading projects:', error);
+        showNotification('Failed to load projects', 'error');
+    }
 }
 
-function createProjectCard(student, project) {
+function createProjectCard(project) {
     const card = document.createElement('div');
     card.className = 'project-card mb-3';
     
@@ -47,25 +69,52 @@ function createProjectCard(student, project) {
         'revision': 'text-info'
     }[project.status];
 
+    const submissionDate = new Date(project.submissionDate).toLocaleDateString();
+    const studentName = project.studentName || 'Student'; // Fallback if name not available
+
     card.innerHTML = `
         <div class="card">
             <div class="card-body">
                 <h5 class="card-title">${project.title}</h5>
                 <h6 class="card-subtitle mb-2 text-muted">
-                    ${student.firstName} ${student.lastName} (${student.enrollmentNumber})
+                    ${studentName} (ID: ${project.studentId})
                 </h6>
                 <p class="card-text">${project.description}</p>
-                <p class="mb-2">
-                    <strong>Category:</strong> ${project.category}
-                    <br>
-                    <strong>Status:</strong> <span class="${statusClass}">${project.status.toUpperCase()}</span>
-                    <br>
-                    <strong>Submitted:</strong> ${new Date(project.submissionDate).toLocaleDateString()}
-                </p>
-                ${project.githubUrl ? `<a href="${project.githubUrl}" target="_blank" class="card-link">View Project</a>` : ''}
-                <button class="btn btn-primary btn-sm" onclick="showFeedbackModal('${student.enrollmentNumber}', '${project.id}')">
-                    Provide Feedback
-                </button>
+                <div class="project-details">
+                    <p class="mb-2">
+                        <strong>Category:</strong> ${project.category}
+                        <br>
+                        <strong>Status:</strong> <span class="${statusClass}">${project.status.toUpperCase()}</span>
+                        <br>
+                        <strong>Submitted:</strong> ${submissionDate}
+                    </p>
+                    <div class="tech-stack">
+                        ${project.technologies.map(tech => 
+                            `<span class="tech-tag">${tech}</span>`
+                        ).join('')}
+                    </div>
+                </div>
+                <div class="project-actions mt-3">
+                    ${project.githubUrl ? 
+                        `<a href="${project.githubUrl}" target="_blank" class="btn btn-sm btn-outline-primary">
+                            <i class="fab fa-github"></i> View Project
+                        </a>` : ''
+                    }
+                    ${project.files && project.files.length > 0 ? 
+                        `<a href="${API_BASE_URL}/uploads/${project.files[0]}" target="_blank" class="btn btn-sm btn-outline-info">
+                            <i class="fas fa-file"></i> View Files
+                        </a>` : ''
+                    }
+                    <button class="btn btn-primary btn-sm" onclick="showFeedbackModal('${project._id}')">
+                        <i class="fas fa-comment"></i> Provide Feedback
+                    </button>
+                </div>
+                ${project.feedback ? `
+                    <div class="feedback-section mt-3">
+                        <h6>Previous Feedback:</h6>
+                        <p class="feedback-content">${project.feedback}</p>
+                    </div>
+                ` : ''}
             </div>
         </div>
     `;
@@ -73,40 +122,44 @@ function createProjectCard(student, project) {
     return card;
 }
 
-function showFeedbackModal(studentId, projectId) {
-    document.getElementById('studentId').value = studentId;
+function showFeedbackModal(projectId) {
     document.getElementById('projectId').value = projectId;
     new bootstrap.Modal(document.getElementById('feedbackModal')).show();
 }
 
-function handleFeedbackSubmission(e) {
+async function handleFeedbackSubmission(e) {
     e.preventDefault();
 
-    const studentId = document.getElementById('studentId').value;
     const projectId = document.getElementById('projectId').value;
     const status = document.getElementById('projectStatus').value;
     const feedback = document.getElementById('feedbackText').value;
 
-    const students = JSON.parse(localStorage.getItem('students')) || [];
-    const studentIndex = students.findIndex(s => s.enrollmentNumber === studentId);
+    try {
+        const response = await fetch(`${API_BASE_URL}/api/projects/${projectId}`, {
+            method: 'PATCH',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${sessionStorage.getItem('token')}`
+            },
+            body: JSON.stringify({
+                status,
+                feedback
+            })
+        });
 
-    if (studentIndex === -1) return;
+        if (!response.ok) {
+            throw new Error('Failed to update project');
+        }
 
-    const projectIndex = students[studentIndex].submissions.findIndex(p => p.id === projectId);
-    
-    if (projectIndex === -1) return;
-
-    // Update project status and feedback
-    students[studentIndex].submissions[projectIndex].status = status;
-    students[studentIndex].submissions[projectIndex].feedback = feedback;
-
-    // Save changes
-    localStorage.setItem('students', JSON.stringify(students));
-
-    // Close modal and reload projects
-    bootstrap.Modal.getInstance(document.getElementById('feedbackModal')).hide();
-    loadProjects('all');
-    e.target.reset();
+        // Close modal and reload projects
+        bootstrap.Modal.getInstance(document.getElementById('feedbackModal')).hide();
+        showNotification('Feedback submitted successfully!', 'success');
+        loadProjects('all');
+        e.target.reset();
+    } catch (error) {
+        console.error('Error submitting feedback:', error);
+        showNotification('Failed to submit feedback', 'error');
+    }
 }
 
 function filterProjects(category) {
@@ -118,6 +171,17 @@ function filterProjects(category) {
 
     // Load filtered projects
     loadProjects(category);
+}
+
+function showNotification(message, type = 'success') {
+    const notification = document.createElement('div');
+    notification.className = `alert alert-${type} notification`;
+    notification.textContent = message;
+    document.body.appendChild(notification);
+
+    setTimeout(() => {
+        notification.remove();
+    }, 3000);
 }
 
 function logout() {
