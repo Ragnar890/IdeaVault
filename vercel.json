@@ -2,24 +2,8 @@
     "version": 2,
     "builds": [
         {
-            "src": "backend/**/*.js",
+            "src": "backend/server.js",
             "use": "@vercel/node"
-        },
-        {
-            "src": "login/**/*",
-            "use": "@vercel/static"
-        },
-        {
-            "src": "home/**/*",
-            "use": "@vercel/static"
-        },
-        {
-            "src": "faculty/**/*",
-            "use": "@vercel/static"
-        },
-        {
-            "src": "student/**/*",
-            "use": "@vercel/static"
         }
     ],
     "routes": [
@@ -49,7 +33,7 @@
         }
     ],
     "env": {
-        "MONGODB_URI": "@mongodb_uri",
-        "JWT_SECRET": "@jwt_secret"
+        "MONGODB_URI": "@MONGODB_URI",
+        "JWT_SECRET": "@jJWT_SECRET"
     }
-} 
+}

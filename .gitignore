@@ -68,3 +68,4 @@ Thumbs.db
 # Project specific
 config.js
 secrets.json
+.vercel

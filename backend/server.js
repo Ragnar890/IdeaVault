@@ -50,6 +50,18 @@ app.use((err, req, res, next) => {
     res.status(500).json({ message: 'Something went wrong!' });
 });
 
+// MongoDB Connection
+mongoose.connect(process.env.MONGODB_URI, {
+    useNewUrlParser: true,
+    useUnifiedTopology: true
+})
+.then(() => {
+    console.log(`✅ Connected to MongoDB: ${process.env.MONGODB_URI}`);
+})
+.catch(err => {
+    console.error('❌ MongoDB connection error:', err);
+});
+
 // For local development
 if (process.env.NODE_ENV !== 'production') {
     const PORT = process.env.PORT || 30001;
@@ -57,6 +69,8 @@ if (process.env.NODE_ENV !== 'production') {
         console.log(`Server running on port ${PORT}`);
         console.log(`API available at http://localhost:${PORT}`);
     });
+
+
 }
 
 // For Vercel
